@@ -34,14 +34,17 @@ body,html{
     opacity: 0;
     pointer-events: none;
     transition: opacity 1.2s ease-in-out;
+    cursor: pointer;
 }
 
 #openingScreen.show{
     opacity: 1;
+    pointer-events: auto;
 }
 
 #openingScreen.hide{
     opacity: 0;
+    pointer-events: none;
 }
 
 #openingImage{
@@ -166,7 +169,7 @@ const starAudioList = [
   "2566e1.mp3",
   "audio.mp3",
   "r1.mp3",
-  "r2.mp3",
+  "rs2.mp3",
   "s1.mp3",
   "s2.mp3",
   "t1.mp3",
@@ -473,6 +476,11 @@ function startFloatingPoints(total = 15) {
 function startOpeningSequence(){
     const openingScreen = document.getElementById("openingScreen");
     const openingImage = document.getElementById("openingImage");
+
+    // 點擊開場層，直接執行背景音樂切換（等同左下角按鈕）
+    openingScreen.onclick = function(){
+        toggleBgMusic();
+    }
 
     // 設定開場圖片路徑
     openingImage.src = "opening.jpg";
