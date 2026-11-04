@@ -64,7 +64,7 @@ canvas#stars{
     z-index:1;
     display: block;
 }
-/* 五角星光點 預設白色，加上relative，讓序號以星星為基準 */
+/* 五角星光點：重點！一定要 relative，序號才會依附星星 */
 .float-point {
   position: fixed;
   z-index: 3;
@@ -92,7 +92,7 @@ canvas#stars{
     0 0 90px rgba(255,220,68,0.35);
   transform: scale(1.15);
 }
-/* 序號標籤：固定顯示在五角星正下方 */
+/* 序號標籤：提高z-index，避免被蓋住 */
 .star-label{
   position:absolute;
   top:48px;
@@ -109,6 +109,7 @@ canvas#stars{
   pointer-events:none;
   transition: all 0.25s ease;
   white-space: nowrap;
+  z-index:4;
 }
 .float-point.active .star-label{
   color:#fff8cc;
@@ -148,7 +149,7 @@ const FADE_STEP = 0.02;
 let bgAudio;
 let bgFadeTimer = null;
 
-// ===================== 【開場時間調整區，直接改這裡數字即可，單位：毫秒】 =====================
+// ===================== 【開場時間調整區，單位：毫秒】 =====================
 const TIME_IMG1_SHOW = 2500;
 const TIME_IMG2_SHOW = 2500;
 // ==========================================================================================
@@ -156,10 +157,8 @@ const TIME_IMG2_SHOW = 2500;
 // ========== 背景音檔 ==========
 const bgAudioSrc = "bg.mp3";
 
-// ========== ✅ 【重點：自訂星星<->數字<->音檔、是否顯示序號】 ==========
-// label：星星下方顯示的文字
-// src：對應播放的mp3檔名
-// showLabel:true 顯示序號｜showLabel:false 隱藏序號（星星依舊存在、可點擊）
+// ========== ✅ 自訂星星<->數字<->音檔、是否顯示序號
+// 重點：showLabel 一定要寫小寫 true / false，不要打 True 或 TRUE
 const starConfig = [
   { label: "1", src: "r1.mp3", showLabel: true },
   { label: "2", src: "r2.mp3", showLabel: true },
@@ -374,9 +373,8 @@ function playRains(){
 }
 /*
 建立漂浮五角星
-活動邊界：螢幕四邊向內收40%
-=> 左右：20% ~ 80%、上下：20% ~ 80%
-傳入自訂配置表，可自由決定每一顆是否顯示序號
+✅ 活動邊界：螢幕 20% ~ 80%（四邊往內收20%，不會貼太邊緣）
+可自由設定每一顆是否顯示序號
 */
 function startFloatingPoints(configList) {
   const boundMin = 20;
@@ -387,7 +385,7 @@ function startFloatingPoints(configList) {
     dot.className = 'float-point';
     dot.dataset.audioSrc = item.src;
 
-    // ✅ 判斷：只有 showLabel=true 才建立序號元素
+    // 只有 showLabel 為 true 才建立序號
     if(item.showLabel === true){
       const label = document.createElement('span');
       label.className = "star-label";
@@ -443,7 +441,7 @@ function startFloatingPoints(configList) {
     move();
   }
 }
-// 開場流程：opening.jpg → opening2.jpg，整套只執行一次，不會重複播放
+// 開場流程：opening.jpg → opening2.jpg，整套只執行一次
 function startOpeningSequence(){
     const openingScreen = document.getElementById("openingScreen");
     const img1 = document.getElementById("img1");
