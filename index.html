@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv='cache-control' content='no-cache'>
+<meta http-equiv='expires' content='0'>
+<meta http-equiv='pragma' content='no-cache'>
+<link rel="icon" href="data:,">
+<title>流星雨夜星光宴</title>
+<style type="text/css">
+*{
+    box-sizing: border-box;
+}
+body{
+    background-color: black;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+body,html{
+    width:100%;
+    height:100%;
+}
+/* 開場圖片容器層，預設直接顯示，優先於流星畫布 */
+#openingScreen{
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 1.2s ease-in-out;
+    cursor: pointer;
+}
+#openingScreen.hide{
+    opacity: 0;
+    pointer-events: none;
+}
+.opening-image-item{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+    opacity: 0;
+    transition: opacity 1.2s ease-in-out;
+}
+.opening-image-item.active{
+    opacity: 1;
+}
+/* 流星雨畫布 */
+canvas#stars{
+    position: fixed;
+    top:0;
+    left:0;
+    width: 100vw;
+    height: 100vh;
+    background: transparent;
+    z-index:1;
+    display: block;
+}
+/* 五角星光點：重點！一定要 relative，序號才會依附星星 */
+.float-point {
+  position: fixed;
+  z-index: 3;
+  pointer-events: auto;
+  width: 40px;
+  height: 40px;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  background: #ffffff;
+  box-shadow:
+    0 0 8px #fff,
+    0 0 18px rgba(255,255,255,0.7),
+    0 0 32px rgba(255,255,255,0.4),
+    0 0 50px rgba(255,255,255,0.2);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+}
+/* 點擊後五角星變亮黃色 */
+.float-point.active{
+  background: #ffdd44;
+  box-shadow:
+    0 0 14px #ffdd44,
+    0 0 32px rgba(255,220,68,0.85),
+    0 0 60px rgba(255,220,68,0.6),
+    0 0 90px rgba(255,220,68,0.35);
+  transform: scale(1.15);
+}
+/* 序號標籤：提高z-index，避免被蓋住 */
+.star-label{
+  position:absolute;
+  top:48px;
+  left:50%;
+  transform: translateX(-50%);
+  color:#ffffff;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:1px;
+  text-shadow:
+    0 0 6px #000,
+    0 0 10px #000,
+    0 0 4px #fff;
+  pointer-events:none;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  z-index:4;
+}
+.float-point.active .star-label{
+  color:#fff8cc;
+  text-shadow:
+    0 0 8px #000,
+    0 0 12px #000,
+    0 0 6px #ffdd66;
+}
+/* 背景音樂按鈕 */
+#bgPlayerBtn {
+  position: fixed;
+  bottom:12px;
+  left:12px;
+  z-index: 10;
+  padding: 6px 12px;
+  font-size:14px;
+  border:none;
+  border-radius:6px;
+  background:rgba(255,215,0,0.85);
+  color:#000;
+  cursor:pointer;
+}
+</style>
+<script>
+var context;
+var canvas;
+var arr = new Array();
+var rains = new Array();
+var starCount = 800;
+var rainCount = 20;
+var windowWidth = window.innerWidth;
+var windowHeight = window.innerHeight;
+let lastPlayingAudio = null;
+const BG_VOLUME_NORMAL = 0.4;
+const BG_VOLUME_LOW = 0.08;
+const FADE_STEP = 0.02;
+let bgAudio;
+let bgFadeTimer = null;
+
+// ===================== 【開場時間調整區，單位：毫秒】 =====================
+const TIME_IMG1_SHOW = 2500;
+const TIME_IMG2_SHOW = 2500;
+// ==========================================================================================
+
+// ========== 背景音檔 ==========
+const bgAudioSrc = "bg.mp3";
+
+// ========== ✅ 自訂星星<->數字<->音檔、是否顯示序號
+// 重點：showLabel 一定要寫小寫 true / false，不要打 True 或 TRUE
+const starConfig = [
+  { label: "1", src: "r1.mp3", showLabel: true },
+  { label: "2", src: "r2.mp3", showLabel: true },
+  { label: "3", src: "s1.mp3", showLabel: true },
+  { label: "7", src: "s2.mp3", showLabel: false },
+  { label: "5", src: "t1.mp3", showLabel: true },
+  { label: "9", src: "t2.mp3", showLabel: false },
+  { label: "10", src: "u1.mp3", showLabel: true },
+  { label: "12", src: "u2.mp3", showLabel: true },
+  { label: "13", src: "v1.mp3", showLabel: false },
+  { label: "14", src: "v2.mp3", showLabel: true },
+  { label: "15", src: "wpc1.mp3", showLabel: true },
+  { label: "4", src: "wpc2.mp3", showLabel: false },
+  { label: "6", src: "wpc3.mp3", showLabel: true },
+  { label: "8", src: "wpc35926.mp3", showLabel: true }
+];
+
+// 背景音樂音量淡入淡出
+function fadeBgVolume(targetVol){
+  clearInterval(bgFadeTimer);
+  bgFadeTimer = setInterval(()=>{
+    if(Math.abs(bgAudio.volume - targetVol) < FADE_STEP){
+      bgAudio.volume = targetVol;
+      clearInterval(bgFadeTimer);
+      return;
+    }
+    bgAudio.volume += (bgAudio.volume > targetVol ? -FADE_STEP : FADE_STEP);
+  }, 50);
+}
+// 單個星光音檔播放完畢回呼
+function onStarAudioEnd(){
+  lastPlayingAudio = null;
+  fadeBgVolume(BG_VOLUME_NORMAL);
+}
+// 切換背景音樂播放/暫停
+function toggleBgMusic(){
+  if(bgAudio.paused){
+    bgAudio.play().catch(e=>console.log(e));
+  }else{
+    bgAudio.pause();
+  }
+  updateBgBtnText();
+}
+// 更新背景音樂按鈕文字
+function updateBgBtnText(){
+  const btn = document.getElementById("bgPlayerBtn");
+  if(!btn) return;
+  btn.innerText = bgAudio.paused ? "背景音樂 ▶" : "背景音樂 ⏸";
+}
+// 初始化畫布與背景音樂
+function init(){
+    canvas = document.getElementById("stars");
+    context = canvas.getContext("2d");
+    resizeCanvas();
+    bgAudio = new Audio(bgAudioSrc);
+    bgAudio.loop = true;
+    bgAudio.volume = BG_VOLUME_NORMAL;
+}
+// 視窗大小變更時重設畫布尺寸
+function resizeCanvas() {
+    windowWidth = window.innerWidth;
+    windowHeight = window.innerHeight;
+    canvas.width = windowWidth;
+    canvas.height = windowHeight;
+    canvas.style.width = windowWidth + "px";
+    canvas.style.height = windowHeight + "px";
+    resetMeteors();
+}
+// 重置流星位置
+function resetMeteors() {
+    for (var i = 0; i < rains.length; i++) {
+        var rain = rains[i];
+        rain.x = Math.random() * windowWidth;
+        rain.y = Math.random() * windowHeight * 0.4;
+    }
+}
+window.addEventListener("resize", resizeCanvas);
+// 背景靜態星星物件
+var Star = function (){
+    this.x = windowWidth * Math.random();
+    this.y = 5000 * Math.random();
+    this.text=".";
+    this.color = "white";
+    this.getColor=function(){
+        var _r = Math.random();
+        if(_r<0.5){
+            this.color = "#333";
+        }else{
+            this.color = "white";
+        }
+    }
+    this.init=function(){
+        this.getColor();
+    }
+    this.draw=function(){
+        context.fillStyle=this.color;
+        context.fillText(this.text, this.x, this.y);
+    }
+}
+window.onload = function() {
+    init();
+    for (var i=0;i<starCount;i++) {
+        var star = new Star();
+        star.init();
+        star.draw();
+        arr.push(star);
+    }
+    for (var i=0;i<rainCount;i++) {
+        var rain = new MeteorRain();
+        rain.init();
+        rain.draw();
+        rains.push(rain);
+    }
+    playStars();
+    playRains();
+    startFloatingPoints(starConfig);
+    updateBgBtnText();
+    startOpeningSequence();
+}
+// 背景星星閃爍動畫
+function playStars(){
+    for (var n = 0; n < starCount; n++){
+        arr[n].getColor();
+        arr[n].draw();
+    }
+    setTimeout("playStars()",100);
+}
+// 流星物件
+var MeteorRain = function(){
+    this.x = -1;
+    this.y = -1;
+    this.length = -1;
+    this.angle = 30;
+    this.width = -1;
+    this.height = -1;
+    this.speed = 1;
+    this.offset_x = -1;
+    this.offset_y = -1;
+    this.alpha = 1;
+    this.color1 = "";
+    this.color2 = "";
+    this.init = function (){
+        this.getPos();
+        this.alpha = 1;
+        this.getRandomColor();
+        var x = Math.random() * 80 + 150;
+        this.length = Math.ceil(x);
+        this.angle = 30;
+        x = Math.random() + 0.5;
+        this.speed = Math.ceil(x);
+        var cos = Math.cos(this.angle * 3.14 / 180);
+        var sin = Math.sin(this.angle * 3.14 / 180);
+        this.width = this.length * cos;
+        this.height = this.length * sin;
+        this.offset_x = this.speed * cos;
+        this.offset_y = this.speed * sin;
+    }
+    this.getRandomColor = function (){
+        var a = Math.ceil(255 - 240 * Math.random());
+        this.color1 = "rgba("+a+","+a+","+a+",1)";
+        this.color2 = "black";
+    }
+    this.countPos = function (){
+        this.x = this.x - this.offset_x;
+        this.y = this.y + this.offset_y;
+    }
+    this.getPos = function (){
+        this.x = Math.random() * windowWidth;
+        this.y = Math.random() * windowHeight * 0.4;
+    }
+    this.draw = function (){
+        context.save();
+        context.beginPath();
+        context.lineWidth = 1;
+        context.globalAlpha = this.alpha;
+        var line = context.createLinearGradient(
+            this.x, this.y,
+            this.x + this.width,
+            this.x - this.height
+        );
+        line.addColorStop(0, "white");
+        line.addColorStop(0.3, this.color1);
+        line.addColorStop(0.6, this.color2);
+        context.strokeStyle = line;
+        context.moveTo(this.x, this.y);
+        context.lineTo(this.x + this.width, this.y - this.height);
+        context.closePath();
+        context.stroke();
+        context.restore();
+    }
+    this.move = function(){
+        var x = this.x + this.width - this.offset_x;
+        var y = this.y - this.height;
+        context.clearRect(x - 3, y - 3, this.offset_x + 5, this.offset_y + 5);
+        this.countPos();
+        this.alpha -= 0.002;
+        this.draw();
+    }
+}
+// 流星移動迴圈
+function playRains(){
+    for (var n = 0; n < rainCount; n++){
+        var rain = rains[n];
+        rain.move();
+        if (rain.y > windowHeight || rain.x < -rain.width) {
+            context.clearRect(rain.x, rain.y - rain.height, rain.width, rain.height);
+            rains[n] = new MeteorRain();
+            rains[n].init();
+        }
+    }
+    setTimeout("playRains()",2);
+}
+/*
+建立漂浮五角星
+✅ 活動邊界：螢幕 20% ~ 80%（四邊往內收20%，不會貼太邊緣）
+可自由設定每一顆是否顯示序號
+*/
+function startFloatingPoints(configList) {
+  const boundMin = 20;
+  const boundMax = 80;
+  for (let idx = 0; idx < configList.length; idx++) {
+    const item = configList[idx];
+    const dot = document.createElement('div');
+    dot.className = 'float-point';
+    dot.dataset.audioSrc = item.src;
+
+    // 只有 showLabel 為 true 才建立序號
+    if(item.showLabel === true){
+      const label = document.createElement('span');
+      label.className = "star-label";
+      label.innerText = item.label;
+      dot.appendChild(label);
+    }
+
+    let x = boundMin + Math.random() * (boundMax - boundMin);
+    let y = boundMin + Math.random() * (boundMax - boundMin);
+    dot.style.left = x + 'vw';
+    dot.style.top = y + 'vh';
+    document.body.appendChild(dot);
+
+    const audio = new Audio(item.src);
+    audio.loop = false;
+    audio.onended = onStarAudioEnd;
+
+    dot.addEventListener('click', function(){
+      const src = this.dataset.audioSrc;
+      if(!src) return;
+      if(!audio.paused){
+        audio.pause();
+        if(lastPlayingAudio === audio){
+          lastPlayingAudio = null;
+          fadeBgVolume(BG_VOLUME_NORMAL);
+        }
+        this.classList.remove('active');
+        return;
+      }
+      document.querySelectorAll('.float-point').forEach(el=>el.classList.remove('active'));
+      this.classList.add('active');
+      if(lastPlayingAudio && lastPlayingAudio !== audio){
+        lastPlayingAudio.pause();
+      }
+      lastPlayingAudio = audio;
+      fadeBgVolume(BG_VOLUME_LOW);
+      audio.play().catch(e=>console.log(e));
+    })
+
+    let vx = (Math.random() - 0.5) * 0.035;
+    let vy = (Math.random() - 0.5) * 0.035;
+    function move() {
+      x += vx;
+      y += vy;
+      if (x < boundMin || x > boundMax) vx = -vx;
+      if (y < boundMin || y > boundMax) vy = -vy;
+      x = Math.max(boundMin, Math.min(boundMax, x));
+      y = Math.max(boundMin, Math.min(boundMax, y));
+      dot.style.left = x + 'vw';
+      dot.style.top = y + 'vh';
+      requestAnimationFrame(move);
+    }
+    move();
+  }
+}
+// 開場流程：opening.jpg → opening2.jpg，整套只執行一次
+function startOpeningSequence(){
+    const openingScreen = document.getElementById("openingScreen");
+    const img1 = document.getElementById("img1");
+    const img2 = document.getElementById("img2");
+    openingScreen.onclick = function(){
+        toggleBgMusic();
+    }
+    img1.src = "opening.jpg";
+    img2.src = "opening2.jpg";
+    img1.classList.add("active");
+    setTimeout(()=>{
+        img1.classList.remove("active");
+        img2.classList.add("active");
+        setTimeout(()=>{
+            openingScreen.classList.add("hide");
+        }, TIME_IMG2_SHOW)
+    }, TIME_IMG1_SHOW)
+}
+</script>
+</head>
+<body>
+<!-- 開場圖片層 -->
+<div id="openingScreen">
+  <img id="img1" class="opening-image-item" alt="開場圖一">
+  <img id="img2" class="opening-image-item" alt="開場圖二">
+</div>
+<!-- 流星雨主畫布 -->
+<canvas id="stars"></canvas>
+<button id="bgPlayerBtn" onclick="toggleBgMusic()">背景音樂 ▶</button>
+</body>
+</html>
