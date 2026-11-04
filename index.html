@@ -88,23 +88,30 @@ canvas#stars{
     0 0 90px rgba(255,220,68,0.35);
   transform: scale(1.15);
 }
-/* 數字標籤 */
+/* 序號標籤：固定顯示在五角星正下方 */
 .star-label{
   position:absolute;
-  top:46px;
+  top:48px;
   left:50%;
   transform: translateX(-50%);
   color:#ffffff;
-  font-size:12px;
+  font-size:13px;
+  font-weight:700;
   letter-spacing:1px;
-  text-shadow: 0 0 6px #fff;
+  text-shadow:
+    0 0 6px #000,
+    0 0 10px #000,
+    0 0 4px #fff;
   pointer-events:none;
   transition: all 0.25s ease;
   white-space: nowrap;
 }
 .float-point.active .star-label{
   color:#fff8cc;
-  text-shadow: 0 0 10px #ffdd66;
+  text-shadow:
+    0 0 8px #000,
+    0 0 12px #000,
+    0 0 6px #ffdd66;
 }
 /* 背景音樂按鈕 */
 #bgPlayerBtn {
@@ -370,7 +377,7 @@ function playRains(){
 建立漂浮五角星
 活動邊界：螢幕四邊向內收40%
 => 左右：20% ~ 80%、上下：20% ~ 80%
-傳入有效音檔陣列，序號自動由1開始連續
+傳入有效音檔陣列，序號自動由1開始連續，序號顯示在星星正下方
 */
 function startFloatingPoints(audioList) {
   const boundMin = 20;
