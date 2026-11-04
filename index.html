@@ -2,6 +2,9 @@
 <html>
 <head>
 <meta charset="utf-8">
+<meta http-equiv='cache-control' content='no-cache'>
+<meta http-equiv='expires' content='0'>
+<meta http-equiv='pragma' content='no-cache'>
 <link rel="icon" href="data:,">
 <title>流星雨夜星光宴</title>
 <style type="text/css">
@@ -61,7 +64,7 @@ canvas#stars{
     z-index:1;
     display: block;
 }
-/* 五角星光點 預設白色 */
+/* 五角星光點 預設白色，加上relative，讓序號以星星為基準 */
 .float-point {
   position: fixed;
   z-index: 3;
@@ -77,6 +80,7 @@ canvas#stars{
     0 0 50px rgba(255,255,255,0.2);
   cursor: pointer;
   transition: all 0.25s ease;
+  position: relative;
 }
 /* 點擊後五角星變亮黃色 */
 .float-point.active{
@@ -145,37 +149,33 @@ let bgAudio;
 let bgFadeTimer = null;
 
 // ===================== 【開場時間調整區，直接改這裡數字即可，單位：毫秒】 =====================
-const TIME_IMG1_SHOW = 2500;   // opening.jpg 顯示時長
-const TIME_IMG2_SHOW = 2500;   // opening2.jpg 顯示時長
+const TIME_IMG1_SHOW = 2500;
+const TIME_IMG2_SHOW = 2500;
 // ==========================================================================================
 
-// ========== 全部檔案放在根目錄 ==========
+// ========== 背景音檔 ==========
 const bgAudioSrc = "bg.mp3";
-const starAudioList = [
-  "r1.mp3",
-  "r2.mp3",
-  "s1.mp3",
-  "s2.mp3",
-  "t1.mp3",
-  "t2.mp3",
-  "u1.mp3",
-  "u2.mp3",
-  "v1.mp3",
-  "v2.mp3",
-  "wpc1.mp3",
-  "wpc2.mp3",
-  "wpc3.mp3",
-  "wpc35926.mp3"
+
+// ========== ✅ 【重點：自訂星星<->數字<->音檔、是否顯示序號】 ==========
+// label：星星下方顯示的文字
+// src：對應播放的mp3檔名
+// showLabel:true 顯示序號｜showLabel:false 隱藏序號（星星依舊存在、可點擊）
+const starConfig = [
+  { label: "1", src: "r1.mp3", showLabel: true },
+  { label: "2", src: "r2.mp3", showLabel: true },
+  { label: "3", src: "s1.mp3", showLabel: true },
+  { label: "7", src: "s2.mp3", showLabel: false },
+  { label: "5", src: "t1.mp3", showLabel: true },
+  { label: "9", src: "t2.mp3", showLabel: false },
+  { label: "10", src: "u1.mp3", showLabel: true },
+  { label: "12", src: "u2.mp3", showLabel: true },
+  { label: "13", src: "v1.mp3", showLabel: false },
+  { label: "14", src: "v2.mp3", showLabel: true },
+  { label: "15", src: "wpc1.mp3", showLabel: true },
+  { label: "4", src: "wpc2.mp3", showLabel: false },
+  { label: "6", src: "wpc3.mp3", showLabel: true },
+  { label: "8", src: "wpc35926.mp3", showLabel: true }
 ];
-const starAudios = [];
-// 預先建立Audio物件
-for(let i=0; i < starAudioList.length; i++){
-  const audio = new Audio();
-  audio.loop = false;
-  starAudios.push(audio);
-}
-// 過濾出有效的音檔（排除空白）
-const validAudioList = starAudioList.filter(src => src.trim() !== "");
 
 // 背景音樂音量淡入淡出
 function fadeBgVolume(targetVol){
@@ -275,8 +275,7 @@ window.onload = function() {
     }
     playStars();
     playRains();
-    // 傳入有效音檔清單，自動生成五角星，序號1開始連續不跳號
-    startFloatingPoints(validAudioList);
+    startFloatingPoints(starConfig);
     updateBgBtnText();
     startOpeningSequence();
 }
@@ -377,19 +376,24 @@ function playRains(){
 建立漂浮五角星
 活動邊界：螢幕四邊向內收40%
 => 左右：20% ~ 80%、上下：20% ~ 80%
-傳入有效音檔陣列，序號自動由1開始連續，序號顯示在星星正下方
+傳入自訂配置表，可自由決定每一顆是否顯示序號
 */
-function startFloatingPoints(audioList) {
+function startFloatingPoints(configList) {
   const boundMin = 20;
   const boundMax = 80;
-  for (let idx = 0; idx < audioList.length; idx++) {
+  for (let idx = 0; idx < configList.length; idx++) {
+    const item = configList[idx];
     const dot = document.createElement('div');
     dot.className = 'float-point';
-    dot.dataset.audioSrc = audioList[idx];
-    const label = document.createElement('span');
-    label.className = "star-label";
-    label.innerText = idx + 1; // 序號 1,2,3…連續
-    dot.appendChild(label);
+    dot.dataset.audioSrc = item.src;
+
+    // ✅ 判斷：只有 showLabel=true 才建立序號元素
+    if(item.showLabel === true){
+      const label = document.createElement('span');
+      label.className = "star-label";
+      label.innerText = item.label;
+      dot.appendChild(label);
+    }
 
     let x = boundMin + Math.random() * (boundMax - boundMin);
     let y = boundMin + Math.random() * (boundMax - boundMin);
@@ -397,7 +401,7 @@ function startFloatingPoints(audioList) {
     dot.style.top = y + 'vh';
     document.body.appendChild(dot);
 
-    const audio = new Audio(audioList[idx]);
+    const audio = new Audio(item.src);
     audio.loop = false;
     audio.onended = onStarAudioEnd;
 
