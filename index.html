@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
+<link rel="icon" href="data:,">
 <title>流星雨夜星光宴</title>
 <style type="text/css">
 *{
@@ -60,14 +61,14 @@ canvas#stars{
     z-index:1;
     display: block;
 }
-/* 漂浮光點預設白色 */
+/* 五角星光點 預設白色 */
 .float-point {
   position: fixed;
   z-index: 3;
   pointer-events: auto;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
   background: #ffffff;
   box-shadow:
     0 0 8px #fff,
@@ -77,7 +78,7 @@ canvas#stars{
   cursor: pointer;
   transition: all 0.25s ease;
 }
-/* 點擊後變亮黃色 */
+/* 點擊後五角星變亮黃色 */
 .float-point.active{
   background: #ffdd44;
   box-shadow:
@@ -90,13 +91,16 @@ canvas#stars{
 /* 數字標籤 */
 .star-label{
   position:absolute;
-  top:44px;
+  top:46px;
+  left:50%;
+  transform: translateX(-50%);
   color:#ffffff;
   font-size:12px;
   letter-spacing:1px;
   text-shadow: 0 0 6px #fff;
   pointer-events:none;
   transition: all 0.25s ease;
+  white-space: nowrap;
 }
 .float-point.active .star-label{
   color:#fff8cc;
@@ -134,8 +138,8 @@ let bgAudio;
 let bgFadeTimer = null;
 
 // ===================== 【開場時間調整區，直接改這裡數字即可，單位：毫秒】 =====================
-const TIME_IMG1_SHOW = 3500;   // opening.jpg 顯示時長
-const TIME_IMG2_SHOW = 3500;   // opening2.jpg 顯示時長
+const TIME_IMG1_SHOW = 2500;   // opening.jpg 顯示時長
+const TIME_IMG2_SHOW = 2500;   // opening2.jpg 顯示時長
 // ==========================================================================================
 
 // ========== 全部檔案放在根目錄 ==========
@@ -155,8 +159,6 @@ const starAudioList = [
   "wpc2.mp3",              //11
   "wpc3.mp3",  	//12
   "wpc35926.mp3",       //13
-  "audio1.mp3",
-  "audio2.mp3",
 ];
 const starAudios = [];
 // 依音訊陣列長度，預先建立Audio物件
@@ -363,7 +365,7 @@ function playRains(){
     setTimeout("playRains()",2);
 }
 /*
-建立漂浮光點
+建立漂浮五角星
 活動邊界：螢幕四邊向內收 40%
 => 左右：20% ~ 80%、上下：20% ~ 80%
 */
@@ -389,7 +391,7 @@ function startFloatingPoints(total) {
     const audio = starAudios[i];
     audio.src = audioSrc;
     audio.onended = onStarAudioEnd;
-    // 點擊光點事件
+    // 點擊五角星事件
     dot.addEventListener('click', function(){
       const idx = Number(this.dataset.starIndex);
       const src = starAudioList[idx];
@@ -430,7 +432,7 @@ function startFloatingPoints(total) {
     move();
   }
 }
-// 開場流程：opening.jpg → opening2.jpg，整套只執行一次，避免重複播放
+// 開場流程：opening.jpg → opening2.jpg，整套只執行一次，不會重複播放
 function startOpeningSequence(){
     const openingScreen = document.getElementById("openingScreen");
     const img1 = document.getElementById("img1");
