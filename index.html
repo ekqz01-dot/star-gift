@@ -134,8 +134,8 @@ let bgAudio;
 let bgFadeTimer = null;
 
 // ===================== 【開場時間調整區，直接改這裡數字即可，單位：毫秒】 =====================
-const TIME_IMG1_SHOW = 4000;   // opening.jpg 顯示時長
-const TIME_IMG2_SHOW = 4000;   // opening2.jpg 顯示時長
+const TIME_IMG1_SHOW = 3500;   // opening.jpg 顯示時長
+const TIME_IMG2_SHOW = 3500;   // opening2.jpg 顯示時長
 // ==========================================================================================
 
 // ========== 全部檔案放在根目錄 ==========
@@ -377,7 +377,7 @@ function startFloatingPoints(total) {
     dot.dataset.starIndex = i;
     const label = document.createElement('span');
     label.className = "star-label";
-    label.innerText = i+1; // 編號從1開始顯示，更符合直覺
+    label.innerText = i+1; // 編號從1開始顯示
     dot.appendChild(label);
     // 初始位置落在限定範圍內
     let x = boundMin + Math.random() * (boundMax - boundMin);
@@ -430,7 +430,7 @@ function startFloatingPoints(total) {
     move();
   }
 }
-// 開場流程：opening.jpg → opening2.jpg，整套只執行一次，不會重複播放
+// 開場流程：opening.jpg → opening2.jpg，整套只執行一次，避免重複播放
 function startOpeningSequence(){
     const openingScreen = document.getElementById("openingScreen");
     const img1 = document.getElementById("img1");
