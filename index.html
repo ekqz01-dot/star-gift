@@ -60,7 +60,7 @@ canvas#stars{
     z-index:1;
     display: block;
 }
-/* 替換為白色光點 + 拖影光暈，移除四芒星 */
+/* 漂浮光點預設白色 */
 .float-point {
   position: fixed;
   z-index: 3;
@@ -77,13 +77,14 @@ canvas#stars{
   cursor: pointer;
   transition: all 0.25s ease;
 }
-/* 點擊啟動高亮狀態，光暈放大 */
+/* 點擊後變亮黃色 */
 .float-point.active{
+  background: #ffdd44;
   box-shadow:
-    0 0 14px #fff,
-    0 0 32px rgba(255,255,255,0.85),
-    0 0 60px rgba(255,220,100,0.6),
-    0 0 90px rgba(255,200,50,0.35);
+    0 0 14px #ffdd44,
+    0 0 32px rgba(255,220,68,0.85),
+    0 0 60px rgba(255,220,68,0.6),
+    0 0 90px rgba(255,220,68,0.35);
   transform: scale(1.15);
 }
 /* 數字標籤 */
@@ -131,14 +132,14 @@ const BG_VOLUME_LOW = 0.08;
 const FADE_STEP = 0.02;
 let bgAudio;
 let bgFadeTimer = null;
+
+// ===================== 【開場時間調整區，直接改這裡數字即可，單位：毫秒】 =====================
+const TIME_IMG1_SHOW = 2500;   // opening.jpg 顯示時長
+const TIME_IMG2_SHOW = 2500;   // opening2.jpg 顯示時長
+// ==========================================================================================
+
 // ========== 全部檔案放在根目錄 ==========
 const bgAudioSrc = "bg.mp3";
-/*
-【新增星星語音方式】
-直接在 starAudioList 陣列後面繼續新增音檔名稱，
-startFloatingPoints 的數量會自動跟隨陣列長度產生對應光點
-空字串代表該光點沒有音檔，點擊不會有反應
-*/
 const starAudioList = [
   "r1.mp3",        //0
   "r2.mp3",        //1
@@ -154,11 +155,6 @@ const starAudioList = [
   "wpc2.mp3",              //11
   "wpc3.mp3",  	//12
   "wpc35926.mp3",       //13
-  /* "wpc1.mp3",      //14
-  "wpc2.mp3",      //15
-  "wpc3.mp3",      //16
-  "graduatePC.mp3",//17
-  "wpc35926.mp3"   //18*/
 ];
 const starAudios = [];
 // 依音訊陣列長度，預先建立Audio物件
@@ -268,7 +264,7 @@ window.onload = function() {
     // 光點數量自動對應音訊陣列長度
     startFloatingPoints(starAudioList.length);
     updateBgBtnText();
-    // 雙張開場圖片輪播漸入漸出，開頁優先顯示圖片
+    // 開場圖片序列：opening.jpg → opening2.jpg，只跑完整一次，不會重複
     startOpeningSequence();
 }
 // 背景星星閃爍動畫
@@ -432,7 +428,7 @@ function startFloatingPoints(total) {
     move();
   }
 }
-// 雙張開場圖片播完一次淡出消失，不會無限輪播
+// 開場流程：opening.jpg → opening2.jpg，整套只執行一次，不會重複播放
 function startOpeningSequence(){
     const openingScreen = document.getElementById("openingScreen");
     const img1 = document.getElementById("img1");
@@ -441,39 +437,22 @@ function startOpeningSequence(){
     openingScreen.onclick = function(){
         toggleBgMusic();
     }
-    // 兩張圖片檔名，放在根目錄
     img1.src = "opening.jpg";
     img2.src = "opening2.jpg";
 
-    let currentShow = img1;
-    currentShow.classList.add("active");
-    let round = 0;
-    function nextImage(){
-      round++;
-      if(currentShow === img1){
+    img1.classList.add("active");
+    setTimeout(()=>{
         img1.classList.remove("active");
         img2.classList.add("active");
-        currentShow = img2;
-      }else{
-        img2.classList.remove("active");
-        img1.classList.add("active");
-        currentShow = img1;
-      }
-      // 兩張都展示完就淡出，不再輪播
-      if(round >= 2){
         setTimeout(()=>{
-          openingScreen.classList.add("hide");
-        },2000)
-        return;
-      }
-      setTimeout(nextImage, 2000);
-    }
-    setTimeout(nextImage, 2000);
+            openingScreen.classList.add("hide");
+        }, TIME_IMG2_SHOW)
+    }, TIME_IMG1_SHOW)
 }
 </script>
 </head>
 <body>
-<!-- 開場圖片層，雙圖輪播 -->
+<!-- 開場圖片層 -->
 <div id="openingScreen">
   <img id="img1" class="opening-image-item" alt="開場圖一">
   <img id="img2" class="opening-image-item" alt="開場圖二">
