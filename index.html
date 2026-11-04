@@ -64,11 +64,18 @@ canvas#stars{
     z-index:1;
     display: block;
 }
-/* 五角星光點：重點！一定要 relative，序號才會依附星星 */
-.float-point {
+
+/* ✅ 新增外層包裝：負責fixed定位、飄移，作為label的定位基準 */
+.dot-wrap {
   position: fixed;
   z-index: 3;
   pointer-events: auto;
+  width: 40px;
+  height: 40px;
+  position: relative;
+}
+/* 五角星本體，不再寫relative！ */
+.float-point {
   width: 40px;
   height: 40px;
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
@@ -80,7 +87,6 @@ canvas#stars{
     0 0 50px rgba(255,255,255,0.2);
   cursor: pointer;
   transition: all 0.25s ease;
-  position: relative;
 }
 /* 點擊後五角星變亮黃色 */
 .float-point.active{
@@ -92,14 +98,14 @@ canvas#stars{
     0 0 90px rgba(255,220,68,0.35);
   transform: scale(1.15);
 }
-/* 序號標籤：提高z-index，避免被蓋住 */
+/* 序號標籤，相對於 dot-wrap 定位 */
 .star-label{
   position:absolute;
   top:48px;
   left:50%;
   transform: translateX(-50%);
   color:#ffffff;
-  font-size:13px;
+  font-size:14px;
   font-weight:700;
   letter-spacing:1px;
   text-shadow:
@@ -110,8 +116,9 @@ canvas#stars{
   transition: all 0.25s ease;
   white-space: nowrap;
   z-index:4;
+  line-height:1.2; /* 強制給行高，避免文字收縮盒子高度 */
 }
-.float-point.active .star-label{
+.dot-wrap.active .star-label{
   color:#fff8cc;
   text-shadow:
     0 0 8px #000,
@@ -373,7 +380,7 @@ function playRains(){
 }
 /*
 建立漂浮五角星
-✅ 活動邊界：螢幕 20% ~ 80%（四邊往內收20%，不會貼太邊緣）
+活動邊界：螢幕 20% ~ 80%（四邊往內收20%）
 可自由設定每一顆是否顯示序號
 */
 function startFloatingPoints(configList) {
@@ -381,42 +388,53 @@ function startFloatingPoints(configList) {
   const boundMax = 80;
   for (let idx = 0; idx < configList.length; idx++) {
     const item = configList[idx];
+    // ✅ 先建立外層包裝 dot-wrap
+    const wrap = document.createElement('div');
+    wrap.className = 'dot-wrap';
+    wrap.dataset.audioSrc = item.src;
+
     const dot = document.createElement('div');
     dot.className = 'float-point';
-    dot.dataset.audioSrc = item.src;
+    wrap.appendChild(dot);
 
-    // 只有 showLabel 為 true 才建立序號
+    // 只有 showLabel 為 true 才建立序號，掛在 wrap 底下
     if(item.showLabel === true){
       const label = document.createElement('span');
       label.className = "star-label";
       label.innerText = item.label;
-      dot.appendChild(label);
+      wrap.appendChild(label);
     }
 
     let x = boundMin + Math.random() * (boundMax - boundMin);
     let y = boundMin + Math.random() * (boundMax - boundMin);
-    dot.style.left = x + 'vw';
-    dot.style.top = y + 'vh';
-    document.body.appendChild(dot);
+    wrap.style.left = x + 'vw';
+    wrap.style.top = y + 'vh';
+    document.body.appendChild(wrap);
 
     const audio = new Audio(item.src);
     audio.loop = false;
     audio.onended = onStarAudioEnd;
 
-    dot.addEventListener('click', function(){
+    wrap.addEventListener('click', function(){
       const src = this.dataset.audioSrc;
       if(!src) return;
+      const innerStar = this.querySelector(".float-point");
       if(!audio.paused){
         audio.pause();
         if(lastPlayingAudio === audio){
           lastPlayingAudio = null;
           fadeBgVolume(BG_VOLUME_NORMAL);
         }
+        innerStar.classList.remove('active');
         this.classList.remove('active');
         return;
       }
-      document.querySelectorAll('.float-point').forEach(el=>el.classList.remove('active'));
+      document.querySelectorAll('.dot-wrap').forEach(el=>{
+        el.classList.remove('active');
+        el.querySelector(".float-point").classList.remove('active');
+      });
       this.classList.add('active');
+      innerStar.classList.add('active');
       if(lastPlayingAudio && lastPlayingAudio !== audio){
         lastPlayingAudio.pause();
       }
@@ -434,8 +452,8 @@ function startFloatingPoints(configList) {
       if (y < boundMin || y > boundMax) vy = -vy;
       x = Math.max(boundMin, Math.min(boundMax, x));
       y = Math.max(boundMin, Math.min(boundMax, y));
-      dot.style.left = x + 'vw';
-      dot.style.top = y + 'vh';
+      wrap.style.left = x + 'vw';
+      wrap.style.top = y + 'vh';
       requestAnimationFrame(move);
     }
     move();
