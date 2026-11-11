@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv='cache-control' content='no-cache'>
+<meta http-equiv='expires' content='0'>
+<meta http-equiv='pragma' content='no-cache'>
+
+<!-- ✅ 标签页图标：使用 intakep.jpg -->
+<link rel="icon" type="image/jpeg" href="intakep.jpg">
+
+<title>流星雨夜星光宴</title>
+<style type="text/css">
+*{ box-sizing: border-box; }
+body{
+    background-color: black;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+body,html{ width:100%; height:100%; }
+
+/* 開場圖片層 */
+#openingScreen{
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 1.2s ease-in-out;
+    cursor: pointer;
+}
+#openingScreen.hide{ opacity: 0; pointer-events: none; }
+.opening-image-item{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+    opacity: 0;
+    transition: opacity 1.2s ease-in-out;
+}
+.opening-image-item.active{ opacity: 1; }
+
+/* 流星雨畫布 */
+canvas#stars{
+    position: fixed;
+    top:0; left:0;
+    width: 100vw; height: 100vh;
+    background: transparent;
+    z-index:1;
+    display: block;
+}
+
+/* 漂浮星星 */
+.dot-wrap{
+  position: fixed;
+  z-index: 3;
+  width: 40px;
+  height: 40px;
+}
+.float-point{
+  width: 40px;
+  height: 40px;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  background: #ffffff;
+  box-shadow:
+    0 0 8px #fff,
+    0 0 18px rgba(255,255,255,0.7),
+    0 0 32px rgba(255,255,255,0.4),
+    0 0 50px rgba(255,255,255,0.2);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.float-point.active{
+  background: #ffdd44;
+  box-shadow:
+    0 0 14px #ffdd44,
+    0 0 32px rgba(255,220,68,0.85),
+    0 0 60px rgba(255,220,68,0.6),
+    0 0 90px rgba(255,220,68,0.35);
+  transform: scale(1.15);
+}
+/* 序號標籤（星星上方） */
+.star-label{
+  position:absolute;
+  bottom:46px;
+  left:50%;
+  transform: translateX(-50%);
+  color:#ffffff;
+  font-size:14px;
+  font-weight:700;
+  letter-spacing:1px;
+  text-shadow:
+    0 0 6px #000,
+    0 0 10px #000,
+    0 0 4px #fff;
+  pointer-events:none;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  z-index:4;
+  line-height:1.2;
+}
+
+/* 星星播放黑幕：預設隱藏，點星星後出現 */
+#starPlayerBar{
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translate(-50%, 20px);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(90vw, 420px);
+  padding: 10px 14px;
+  background: rgba(0,0,0,0.82);
+  border: 1px solid rgba(255,221,0,0.3);
+  border-radius: 26px;
+  box-shadow: 0 0 24px rgba(255,221,0,0.2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+#starPlayerBar.show{
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+#starPlayerLabel{
+  color:#ffdd44;
+  font-size:14px;
+  font-weight:700;
+  white-space:nowrap;
+  min-width:52px;
+  text-align:center;
+}
+#starPlayerPlayBtn{
+  width:34px;
+  height:34px;
+  border:none;
+  border-radius:50%;
+  background:#ffdd44;
+  color:#000;
+  font-size:14px;
+  cursor:pointer;
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+}
+#starPlayerProgress{
+  flex:1;
+  height:6px;
+  cursor:pointer;
+  accent-color:#ffdd44;
+}
+#starPlayerCloseBtn{
+  width:26px;
+  height:26px;
+  border:none;
+  border-radius:50%;
+  background:rgba(255,255,255,0.18);
+  color:#fff;
+  font-size:13px;
+  cursor:pointer;
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+}
+
+/* 背景音樂按鈕 */
+#bgPlayerBtn{
+  position: fixed;
+  bottom:14px;
+  left:14px;
+  z-index: 10;
+  width:46px;
+  height:46px;
+  border:none;
+  border-radius:50%;
+  background:rgba(255,215,0,0.85);
+  color:#000;
+  font-size:20px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition: box-shadow 0.25s ease;
+}
+#bgPlayerBtn.playing{
+  box-shadow:0 0 18px rgba(255,221,0,0.9);
+}
+
+/* 右下角電視圖示 */
+#tvIcon{
+  position:fixed;
+  right:24px;
+  bottom:24px;
+  width:56px;
+  height:56px;
+  background:rgba(255,221,0,0.92);
+  color:#000;
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  cursor:pointer;
+  z-index:10;
+  box-shadow:0 0 18px rgba(255,221,0,0.5);
+}
+
+/* 影片彈窗 */
+#videoModal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.82);
+  z-index:20;
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+#videoModal.show{ display:flex; }
+.video-modal-content{
+  position:relative;
+  width:min(92vw, 960px);
+  background:#000;
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:0 0 40px rgba(255,221,0,0.25);
+}
+#videoCloseBtn{
+  position:absolute;
+  top:12px;
+  right:12px;
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  border:none;
+  background:rgba(0,0,0,0.55);
+  color:#fff;
+  font-size:18px;
+  cursor:pointer;
+  z-index:3;
+}
+#giftVideo{
+  width:100%;
+  display:block;
+  cursor:pointer;
+}
+/* 影片控制條：常駐顯示 */
+.video-progress-wrap{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  padding:10px 14px;
+  background:linear-gradient(to top, rgba(0,0,0,0.82), rgba(0,0,0,0));
+  display:flex;
+  align-items:center;
+  gap:10px;
+  z-index:2;
+}
+#videoPlayBtn{
+  width:40px;
+  height:30px;
+  border:none;
+  border-radius:6px;
+  background:#ffdd44;
+  color:#000;
+  font-size:15px;
+  cursor:pointer;
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+}
+#videoProgress{
+  flex:1;
+  height:7px;
+  cursor:pointer;
+  accent-color:#ffdd44;
+}
+#videoTime{
+  color:#fff;
+  font-size:13px;
+  font-variant-numeric: tabular-nums;
+  white-space:nowrap;
+}
+</style>
+</head>
+<body>
+<!-- 開場圖片層 -->
+<div id="openingScreen">
+  <img id="img1" class="opening-image-item" alt="開場圖一">
+  <img id="img2" class="opening-image-item" alt="開場圖二">
+</div>
+
+<!-- 流星雨主畫布 -->
+<canvas id="stars"></canvas>
+
+<!-- 背景音樂按鈕 -->
+<button id="bgPlayerBtn" title="背景音樂">🎵</button>
+
+<!-- 星星播放黑幕（點星星後出現） -->
+<div id="starPlayerBar">
+  <span id="starPlayerLabel">★</span>
+  <button id="starPlayerPlayBtn" type="button">▶</button>
+  <input type="range" id="starPlayerProgress" min="0" max="100" value="0">
+  <button id="starPlayerCloseBtn" type="button">✕</button>
+</div>
+
+<!-- 右下角電視圖示 -->
+<div id="tvIcon" title="播放影片">📺</div>
+
+<!-- 影片彈窗 -->
+<div id="videoModal">
+  <div class="video-modal-content">
+    <button id="videoCloseBtn" type="button">✕</button>
+    <video id="giftVideo" src="gift.mp4" preload="metadata"></video>
+    <div class="video-progress-wrap">
+      <button id="videoPlayBtn" type="button">▶</button>
+      <input type="range" id="videoProgress" min="0" max="100" value="0">
+      <span id="videoTime">00:00 / 00:00</span>
+    </div>
+  </div>
+</div>
+
+<script>
+var context;
+var canvas;
+var arr = new Array();
+var rains = new Array();
+var starCount = 800;
+var rainCount = 20;
+var windowWidth = window.innerWidth;
+var windowHeight = window.innerHeight;
+
+const BG_VOLUME_NORMAL = 0.4;
+const BG_VOLUME_LOW = 0.08;
+const FADE_STEP = 0.02;
+let bgAudio;
+let bgFadeTimer = null;
+
+// 星星黑幕播放器狀態
+let currentStar = null;
+let starBar, starBarLabel, starBarPlayBtn, starBarProgress, starBarCloseBtn;
+
+// ===================== 【開場時間調整區，單位：毫秒】 =====================
+const TIME_IMG1_SHOW = 2500;
+const TIME_IMG2_SHOW = 2500;
+// =========================================================================
+
+const bgAudioSrc = "bg.mp3";
+
+const starConfig = [
+  { label: "14", src: "r1.mp3", showLabel: true },
+  { label: "5",  src: "r2.mp3", showLabel: true },
+  { label: "12", src: "s1.mp3", showLabel: true },
+  { label: "7",  src: "s2.mp3", showLabel: true },
+  { label: "2",  src: "t1.mp3", showLabel: true },
+  { label: "9",  src: "t2.mp3", showLabel: true },
+  { label: "10", src: "u1.mp3", showLabel: true },
+  { label: "3",  src: "u2.mp3", showLabel: true },
+  { label: "13", src: "v1.mp3", showLabel: true },
+  { label: "1",  src: "v2.mp3", showLabel: true },
+  { label: "15", src: "wpc1.mp3", showLabel: true },
+  { label: "4",  src: "wpc2.mp3", showLabel: true },
+  { label: "6",  src: "wpc3.mp3", showLabel: true },
+  { label: "8",  src: "wpc35926.mp3", showLabel: true },
+  { label: "11", src: "wpc35926.mp3", showLabel: true }
+];
+
+/* ============ 背景音樂 ============ */
+function fadeBgVolume(targetVol){
+  if(!bgAudio) return;
+  clearInterval(bgFadeTimer);
+  bgFadeTimer = setInterval(()=>{
+    if(Math.abs(bgAudio.volume - targetVol) < FADE_STEP){
+      bgAudio.volume = targetVol;
+      clearInterval(bgFadeTimer);
+      return;
+    }
+    bgAudio.volume += (bgAudio.volume > targetVol ? -FADE_STEP : FADE_STEP);
+  }, 50);
+}
+function updateBgBtnText(){
+  const btn = document.getElementById("bgPlayerBtn");
+  if(!btn || !bgAudio) return;
+  const paused = bgAudio.paused;
+  btn.textContent = paused ? "🎵" : "⏸";
+  btn.classList.toggle("playing", !paused);
+}
+function toggleBgMusic(){
+  if(!bgAudio) return;
+  if(bgAudio.paused){
+    bgAudio.play().catch(e=>console.log(e));
+  }else{
+    bgAudio.pause();
+  }
+  updateBgBtnText();
+}
+
+/* ============ 初始化 ============ */
+function init(){
+  canvas = document.getElementById("stars");
+  context = canvas.getContext("2d");
+  resizeCanvas();
+
+  bgAudio = new Audio(bgAudioSrc);
+  bgAudio.loop = true;
+  bgAudio.volume = BG_VOLUME_NORMAL;
+  bgAudio.addEventListener("play", updateBgBtnText);
+  bgAudio.addEventListener("pause", updateBgBtnText);
+
+  document.getElementById("bgPlayerBtn").addEventListener("click", toggleBgMusic);
+
+  initStarBar();
+}
+function resizeCanvas(){
+  windowWidth = window.innerWidth;
+  windowHeight = window.innerHeight;
+  canvas.width = windowWidth;
+  canvas.height = windowHeight;
+  canvas.style.width = windowWidth + "px";
+  canvas.style.height = windowHeight + "px";
+  resetMeteors();
+}
+function resetMeteors(){
+  for (var i = 0; i < rains.length; i++) {
+    var rain = rains[i];
+    rain.x = Math.random() * windowWidth;
+    rain.y = Math.random() * windowHeight * 0.4;
+  }
+}
+window.addEventListener("resize", resizeCanvas);
+
+/* ============ 背景星星 ============ */
+var Star = function (){
+  this.x = windowWidth * Math.random();
+  this.y = 5000 * Math.random();
+  this.text = ".";
+  this.color = "white";
+  this.getColor = function(){
+    this.color = Math.random() < 0.5 ? "#333" : "white";
+  };
+  this.init = function(){ this.getColor(); };
+  this.draw = function(){
+    context.fillStyle = this.color;
+    context.fillText(this.text, this.x, this.y);
+  };
+};
+
+window.onload = function() {
+  init();
+  for (var i=0;i<starCount;i++) {
+    var star = new Star();
+    star.init();
+    star.draw();
+    arr.push(star);
+  }
+  for (var i=0;i<rainCount;i++) {
+    var rain = new MeteorRain();
+    rain.init();
+    rain.draw();
+    rains.push(rain);
+  }
+  playStars();
+  playRains();
+  startFloatingPoints(starConfig);
+  updateBgBtnText();
+  startOpeningSequence();
+  initVideoPlayer();
+};
+
+function playStars(){
+  for (var n = 0; n < starCount; n++){
+    arr[n].getColor();
+    arr[n].draw();
+  }
+  setTimeout(playStars, 100);
+}
+
+/* ============ 流星 ============ */
+var MeteorRain = function(){
+  this.x = -1; this.y = -1;
+  this.length = -1; this.angle = 30;
+  this.width = -1; this.height = -1;
+  this.speed = 1;
+  this.offset_x = -1; this.offset_y = -1;
+  this.alpha = 1;
+  this.color1 = ""; this.color2 = "";
+  this.init = function (){
+    this.getPos();
+    this.alpha = 1;
+    this.getRandomColor();
+    var x = Math.random() * 80 + 150;
+    this.length = Math.ceil(x);
+    this.angle = 30;
+    x = Math.random() + 0.5;
+    this.speed = Math.ceil(x);
+    var cos = Math.cos(this.angle * 3.14 / 180);
+    var sin = Math.sin(this.angle * 3.14 / 180);
+    this.width = this.length * cos;
+    this.height = this.length * sin;
+    this.offset_x = this.speed * cos;
+    this.offset_y = this.speed * sin;
+  };
+  this.getRandomColor = function (){
+    var a = Math.ceil(255 - 240 * Math.random());
+    this.color1 = "rgba("+a+","+a+","+a+",1)";
+    this.color2 = "black";
+  };
+  this.countPos = function (){
+    this.x = this.x - this.offset_x;
+    this.y = this.y + this.offset_y;
+  };
+  this.getPos = function (){
+    this.x = Math.random() * windowWidth;
+    this.y = Math.random() * windowHeight * 0.4;
+  };
+  this.draw = function (){
+    context.save();
+    context.beginPath();
+    context.lineWidth = 1;
+    context.globalAlpha = this.alpha;
+    var line = context.createLinearGradient(
+      this.x, this.y,
+      this.x + this.width,
+      this.y - this.height
+    );
+    line.addColorStop(0, "white");
+    line.addColorStop(0.3, this.color1);
+    line.addColorStop(0.6, this.color2);
+    context.strokeStyle = line;
+    context.moveTo(this.x, this.y);
+    context.lineTo(this.x + this.width, this.y - this.height);
+    context.closePath();
+    context.stroke();
+    context.restore();
+  };
+  this.move = function(){
+    var x = this.x + this.width - this.offset_x;
+    var y = this.y - this.height;
+    context.clearRect(x - 3, y - 3, this.offset_x + 5, this.offset_y + 5);
+    this.countPos();
+    this.alpha -= 0.002;
+    this.draw();
+  };
+};
+
+function playRains(){
+  for (var n = 0; n < rainCount; n++){
+    var rain = rains[n];
+    rain.move();
+    if (rain.y > windowHeight || rain.x < -rain.width) {
+      context.clearRect(rain.x, rain.y - rain.height, rain.width, rain.height);
+      rains[n] = new MeteorRain();
+      rains[n].init();
+    }
+  }
+  setTimeout(playRains, 2);
+}
+
+/* ============ 星星黑幕播放器 ============ */
+function initStarBar(){
+  starBar = document.getElementById("starPlayerBar");
+  starBarLabel = document.getElementById("starPlayerLabel");
+  starBarPlayBtn = document.getElementById("starPlayerPlayBtn");
+  starBarProgress = document.getElementById("starPlayerProgress");
+  starBarCloseBtn = document.getElementById("starPlayerCloseBtn");
+
+  starBarPlayBtn.addEventListener("click", () => {
+    if(!currentStar) return;
+    const a = currentStar.audio;
+    if(a.paused) a.play().catch(e=>console.log(e));
+    else a.pause();
+  });
+
+  starBarProgress.addEventListener("input", () => {
+    if(!currentStar || !currentStar.audio.duration) return;
+    currentStar.audio.currentTime = currentStar.audio.duration * (starBarProgress.value / 100);
+  });
+
+  starBarCloseBtn.addEventListener("click", () => {
+    if(currentStar) currentStar.audio.pause();
+    currentStar = null;
+    starBar.classList.remove("show");
+    starBarProgress.value = 0;
+    starBarPlayBtn.textContent = "▶";
+    document.querySelectorAll(".float-point.active").forEach(el=>el.classList.remove("active"));
+    fadeBgVolume(BG_VOLUME_NORMAL);
+  });
+}
+
+function syncStarBarPlayBtn(){
+  if(!currentStar){ starBarPlayBtn.textContent = "▶"; return; }
+  starBarPlayBtn.textContent = currentStar.audio.paused ? "▶" : "⏸";
+}
+
+/* ============ 漂浮星星 ============ */
+function startFloatingPoints(configList) {
+  const boundMin = 20;
+  const boundMax = 80;
+
+  for (let idx = 0; idx < configList.length; idx++) {
+    const item = configList[idx];
+
+    const wrap = document.createElement('div');
+    wrap.className = 'dot-wrap';
+
+    const dot = document.createElement('div');
+    dot.className = 'float-point';
+    wrap.appendChild(dot);
+
+    if(item.showLabel === true){
+      const label = document.createElement('span');
+      label.className = "star-label";
+      label.innerText = item.label;
+      wrap.appendChild(label);
+    }
+
+    let x = boundMin + Math.random() * (boundMax - boundMin);
+    let y = boundMin + Math.random() * (boundMax - boundMin);
+    wrap.style.left = x + 'vw';
+    wrap.style.top = y + 'vh';
+    document.body.appendChild(wrap);
+
+    const audio = new Audio(item.src);
+    audio.loop = false;
+
+    const starObj = { audio, label: item.label, dot: dot };
+
+    // 播放進度同步到黑幕
+    audio.addEventListener("timeupdate", () => {
+      if(currentStar === starObj && audio.duration){
+        starBarProgress.value = (audio.currentTime / audio.duration) * 100;
+      }
+    });
+    audio.addEventListener("play", () => {
+      if(currentStar === starObj) syncStarBarPlayBtn();
+      fadeBgVolume(BG_VOLUME_LOW);
+    });
+    audio.addEventListener("pause", () => {
+      if(currentStar === starObj) syncStarBarPlayBtn();
+      fadeBgVolume(BG_VOLUME_NORMAL);
+    });
+    audio.addEventListener("ended", () => {
+      if(currentStar === starObj){
+        syncStarBarPlayBtn();
+        starBarProgress.value = 0;
+      }
+      fadeBgVolume(BG_VOLUME_NORMAL);
+    });
+
+    // 點擊星星：播放/暫停，或切換到這顆星星
+    wrap.addEventListener("click", () => {
+      if(currentStar === starObj){
+        if(audio.paused) audio.play().catch(e=>console.log(e));
+        else audio.pause();
+        return;
+      }
+      // 切換到另一顆星星
+      if(currentStar){
+        currentStar.audio.pause();
+        currentStar.audio.currentTime = 0;
+        if(currentStar.dot) currentStar.dot.classList.remove("active");
+      }
+      currentStar = starObj;
+      starBarLabel.textContent = "★ " + item.label;
+      starBar.classList.add("show");
+      dot.classList.add("active");
+      audio.currentTime = 0;
+      audio.play().catch(e=>console.log(e));
+      syncStarBarPlayBtn();
+    });
+
+    // 漂浮
+    let vx = (Math.random() - 0.5) * 0.035;
+    let vy = (Math.random() - 0.5) * 0.035;
+    function move() {
+      x += vx;
+      y += vy;
+      if (x <= boundMin || x >= boundMax) {
+        vx = -vx;
+        x = Math.max(boundMin, Math.min(boundMax, x));
+      }
+      if (y <= boundMin || y >= boundMax) {
+        vy = -vy;
+        y = Math.max(boundMin, Math.min(boundMax, y));
+      }
+      wrap.style.left = x + 'vw';
+      wrap.style.top  = y + 'vh';
+      requestAnimationFrame(move);
+    }
+    move();
+  }
+}
+
+/* ============ 開場流程 ============ */
+function startOpeningSequence(){
+  const openingScreen = document.getElementById("openingScreen");
+  const img1 = document.getElementById("img1");
+  const img2 = document.getElementById("img2");
+
+  openingScreen.onclick = function(){
+    toggleBgMusic();
+  };
+
+  img1.src = "opening.jpg";
+  img2.src = "opening2.jpg";
+  img1.classList.add("active");
+
+  setTimeout(()=>{
+    img1.classList.remove("active");
+    img2.classList.add("active");
+    setTimeout(()=>{
+      openingScreen.classList.add("hide");
+    }, TIME_IMG2_SHOW);
+  }, TIME_IMG1_SHOW);
+}
+
+/* ============ 影片播放器 ============ */
+function initVideoPlayer(){
+  const tvIcon = document.getElementById("tvIcon");
+  const videoModal = document.getElementById("videoModal");
+  const videoCloseBtn = document.getElementById("videoCloseBtn");
+  const giftVideo = document.getElementById("giftVideo");
+  const videoProgress = document.getElementById("videoProgress");
+  const videoTime = document.getElementById("videoTime");
+  const videoPlayBtn = document.getElementById("videoPlayBtn");
+
+  // ✅ 記錄「打開視頻前 BGM 是否在播放」，用於視頻結束/關閉後恢復
+  let bgWasPlayingBeforeVideo = false;
+
+  function pauseBgForVideo(){
+    if(!bgAudio) return;
+    bgWasPlayingBeforeVideo = !bgAudio.paused;
+    if(!bgAudio.paused) bgAudio.pause();   // pause 事件會更新按鈕顯示
+    updateBgBtnText();
+  }
+
+  function resumeBgAfterVideo(){
+    if(bgWasPlayingBeforeVideo && bgAudio && bgAudio.paused){
+      bgAudio.play().catch(e=>console.log(e));
+    }
+    bgWasPlayingBeforeVideo = false;
+    updateBgBtnText();
+  }
+
+  function formatTime(sec){
+    if(isNaN(sec)) return "00:00";
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+  }
+
+  function toggleVideoPlay(){
+    if(giftVideo.paused){
+      giftVideo.play().catch(e=>console.log(e));
+    }else{
+      giftVideo.pause();
+    }
+  }
+
+  function closeVideoModal(){
+    giftVideo.pause();
+    videoModal.classList.remove("show");
+    // ✅ 用戶關閉視頻 → 恢復 BGM
+    resumeBgAfterVideo();
+  }
+
+  tvIcon.addEventListener("click", () => {
+    // ✅ 打開視頻前先暫停 BGM
+    pauseBgForVideo();
+    videoModal.classList.add("show");
+    giftVideo.currentTime = 0;
+    giftVideo.play().catch(e => console.log("影片播放失敗：", e));
+  });
+
+  videoCloseBtn.addEventListener("click", closeVideoModal);
+
+  videoModal.addEventListener("click", (e) => {
+    if(e.target === videoModal){
+      closeVideoModal();
+    }
+  });
+
+  // ✅ 視頻自然播放結束 → 恢復 BGM
+  giftVideo.addEventListener("ended", () => {
+    resumeBgAfterVideo();
+  });
+
+  // 點擊影片畫面：播放/暫停
+  giftVideo.addEventListener("click", toggleVideoPlay);
+
+  // 控制條播放/暫停按鈕
+  videoPlayBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleVideoPlay();
+  });
+
+  // 進度條拖拉跳轉
+  videoProgress.addEventListener("input", () => {
+    if(!giftVideo.duration) return;
+    giftVideo.currentTime = giftVideo.duration * (videoProgress.value / 100);
+  });
+
+  giftVideo.addEventListener("loadedmetadata", () => {
+    videoTime.textContent = "00:00 / " + formatTime(giftVideo.duration);
+  });
+
+  giftVideo.addEventListener("timeupdate", () => {
+    if(!giftVideo.duration) return;
+    videoProgress.value = (giftVideo.currentTime / giftVideo.duration) * 100;
+    videoTime.textContent = formatTime(giftVideo.currentTime) + " / " + formatTime(giftVideo.duration);
+    videoPlayBtn.textContent = giftVideo.paused ? "▶" : "⏸";
+  });
+
+  giftVideo.addEventListener("play", () => {
+    videoPlayBtn.textContent = "⏸";
+  });
+  giftVideo.addEventListener("pause", () => {
+    videoPlayBtn.textContent = "▶";
+  });
+}
+</script>
+</body>
+</html>
